@@ -4,8 +4,22 @@
 #define ENABLE_GxEPD2_GFX 0
 
 #include <GxEPD2_BW.h>
-
+#include <stdint.h>
 #include <Fonts/FreeMonoBold9pt7b.h>  //height: 9px
+#include <Fonts/Org_01.h>
+#include <Fonts/Picopixel.h>
+#include <Fonts/Tiny3x3a2pt7b.h>
+#include <Fonts/TomThumb.h>
+
+/*
+
+
+  int16_t x1, y1;
+  uint16_t w, h;
+  char tekst[] = "1234drink";
+  display.getTextBounds(tekst,100,100,&x1,&y1,&w,&h);
+*/
+
 
 #include <Adafruit_TinyUSB.h>
 
@@ -25,7 +39,10 @@ void setup() {
   //helloWorld();
   //helloFullScreenPartialMode();
   delay(1000);
-  partialTest();
+  drawHours();
+  draw15minBlock(50, 0);
+  draw15minBlock(50, 15);
+
   if (display.epd2.hasFastPartialUpdate) {
     //showPartialUpdate();
     delay(1000);
@@ -60,6 +77,50 @@ void helloWorld() {
   } while (display.nextPage());
 }
 
+void drawHours() {
+  display.setTextColor(GxEPD_BLACK);
+  display.setRotation(0);
+  display.firstPage();
+
+  display.setPartialWindow(0, 0, display.width() , display.height());
+  display.setCursor(200, 150);
+  display.setFont(&TomThumb);
+  display.setTextSize(2);
+  
+  
+   for (int i = 0; i < 5; i++) {
+    uint8_t y_pos = 10 + (i * 61);
+    display.drawLine(40, y_pos-12, 50, y_pos-12, GxEPD_BLACK);
+    display.setCursor(5, y_pos);
+    display.print(13 + i);
+    display.print(":00");
+    delay(100);
+    display.nextPage();
+  }
+  
+
+}
+
+void draw15minBlock(uint8_t x, uint8_t y) {
+  display.setTextColor(GxEPD_BLACK);
+  display.setRotation(0);
+
+  display.setPartialWindow(0, 0, display.width() , display.height());
+  display.setCursor(200, 150);
+  display.setFont(&TomThumb);
+  display.setTextSize(2);
+  //display.fillRect(box_x, box_y, box_w, box_h, GxEPD_WHITE);
+
+  display.drawLine(x, y, x+150, y, GxEPD_BLACK);
+  display.drawLine(x, y, x, y + 15, GxEPD_BLACK);
+  display.drawLine(x, y + 15, x+150, y + 15, GxEPD_BLACK);
+  display.drawLine(x+150, y, x+150, y + 15, GxEPD_BLACK);
+
+  display.setCursor(x+3, y + 13);
+  display.print("Example event");
+  display.nextPage();
+  
+}
 void helloFullScreenPartialMode() {
   //Serial.println("helloFullScreenPartialMode");
   const char fullscreen[] = "full screen update";
@@ -122,28 +183,34 @@ void partialTest() {
   display.setFont(&FreeMonoBold9pt7b);
   display.setTextColor(GxEPD_BLACK);
   display.setRotation(0);
-  display.setPartialWindow(0, 0, display.width(), display.height());
-
-
-  //display.fillRect(box_x, box_y, box_w, box_h, GxEPD_BLACK);
   display.firstPage();
 
-    display.fillRect(box_x, box_y, box_w, box_h, GxEPD_BLACK);
-  display.nextPage();
-  delay(1000);
-  display.fillRect(box_x, box_y, box_w, box_h, GxEPD_WHITE);
-  display.setCursor(5, 10);
+
+  display.setPartialWindow(0, 0, display.width() , display.height());
+  display.setCursor(200, 150);
+  display.setFont(&TomThumb);
+  display.setTextSize(2);
+  display.print("this is tom thumb");
+  
   for (int i = 0; i < 5; i++) {
-    display.setCursor(5, 10 + (i * 60));
+    uint8_t y_pos = 10 + (i * 60);
+    display.drawLine(32, y_pos, 36, y_pos, GxEPD_BLACK);
+    display.setCursor(5, y_pos);
     display.print(13 + i);
     display.print(":00");
-    
+    delay(100);
+    display.nextPage();
   }
-  //display.print("324");
-  display.nextPage();
-  delay(1000);
-  display.fillRect(box_x, box_y, box_w, box_h, GxEPD_BLACK);
-  display.nextPage();
+    int16_t x1, y1;
+  uint16_t w, h;
+  char tekst[] = "1234drink";
+  display.getTextBounds(tekst,100,100,&x1,&y1,&w,&h);
+  Serial.println(h);
+
+
+
+
+  
   /*
   
   while (display.nextPage());
@@ -237,7 +304,6 @@ void showPartialUpdate() {
 void loop() {
   // put your main code here, to run repeatedly:
   digitalWrite(LED_BUILTIN, HIGH);
-  Serial.println("sdjflaklsd");
   delay(2000);
   digitalWrite(LED_BUILTIN, LOW);
   delay(2000);
