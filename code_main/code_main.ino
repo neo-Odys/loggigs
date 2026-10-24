@@ -12,12 +12,13 @@
 #include <Fonts/TomThumb.h>
 
 /*
-
-
   int16_t x1, y1;
   uint16_t w, h;
   char tekst[] = "1234drink";
   display.getTextBounds(tekst,100,100,&x1,&y1,&w,&h);
+
+  full refresh diplay
+  display.setFullWindow();
 */
 
 
@@ -35,16 +36,20 @@ GxEPD2_BW<GxEPD2_420_GDEY042T81, GxEPD2_420_GDEY042T81::HEIGHT> display(GxEPD2_4
 
 void setup() {
   pinMode(LED_BUILTIN, OUTPUT);
+  display.setTextColor(GxEPD_BLACK);
   display.init(115200, true, 50, false);
+  display.setRotation(0);
+  display.firstPage();
   //helloWorld();
   //helloFullScreenPartialMode();
   delay(1000);
-  drawHours();
-  draw15minBlock(50, 0);
-  draw15minBlock(50, 15);
+  drawTopPanel();
+  drawEventBox(745, 0, 39, 150, (uint16_t)300 - 38);
 
+  //drawHours();
+  //draw15minBlock(50, 100);
+  //draw15minBlock(50, 15);
   if (display.epd2.hasFastPartialUpdate) {
-    //showPartialUpdate();
     delay(1000);
   }
   display.hibernate();
@@ -53,74 +58,92 @@ void setup() {
 const char HelloWorld[] = "Hello World!";
 const char HelloWeACtStudio[] = "WeAct Studio";
 
-void helloWorld() {
-  display.setRotation(1);
-  display.setFont(&FreeMonoBold9pt7b);
-  display.setTextColor(GxEPD_BLACK);
-  int16_t tbx, tby;
-  uint16_t tbw, tbh;
-  display.getTextBounds(HelloWorld, 0, 0, &tbx, &tby, &tbw, &tbh);
-  // center the bounding box by transposition of the origin:
-  uint16_t x = ((display.width() - tbw) / 2) - tbx;
-  uint16_t y = ((display.height() - tbh) / 2) - tby;
-  display.setFullWindow();
-  display.firstPage();
-  do {
-    display.fillScreen(GxEPD_WHITE);
-    display.setCursor(x, y - tbh);
-    display.print(HelloWorld);
-    display.setTextColor(display.epd2.hasColor ? GxEPD_RED : GxEPD_BLACK);
-    display.getTextBounds(HelloWeACtStudio, 0, 0, &tbx, &tby, &tbw, &tbh);
-    x = ((display.width() - tbw) / 2) - tbx;
-    display.setCursor(x, y + tbh);
-    display.print(HelloWeACtStudio);
-  } while (display.nextPage());
-}
+void drawEventBox(uint16_t minute, uint8_t x, uint8_t event_box_pos_y, uint16_t width, uint16_t height) {
+  display.setPartialWindow(0, event_box_pos_y, width, height);
+  display.fillRect(0, event_box_pos_y, width + 1, height, GxEPD_BLACK);
+  display.nextPage();
+  delay(1000);
+  display.fillRect(0, event_box_pos_y, width + 1, height, GxEPD_WHITE);
+  display.nextPage();
 
-void drawHours() {
-  display.setTextColor(GxEPD_BLACK);
-  display.setRotation(0);
-  display.firstPage();
-
-  display.setPartialWindow(0, 0, display.width() , display.height());
-  display.setCursor(200, 150);
+  //draw hours
   display.setFont(&TomThumb);
   display.setTextSize(2);
-  
-  
-   for (int i = 0; i < 5; i++) {
-    uint8_t y_pos = 10 + (i * 61);
-    display.drawLine(40, y_pos-12, 50, y_pos-12, GxEPD_BLACK);
-    display.setCursor(5, y_pos);
-    display.print(13 + i);
-    display.print(":00");
-    delay(100);
-    display.nextPage();
-  }
-  
 
+  
+  for (int i = 0; i < 23; i++) {
+    int y_pos = event_box_pos_y + (i * 60) - minute;
+    if(y_pos < event_box_pos_y - 60){
+      continue;
+    }
+    display.drawLine(0,y_pos , 46, y_pos, GxEPD_BLACK);
+    for(int y = 1; y < 4; y++){
+      display.drawLine(40,y_pos + (y*15) , 46, y_pos + (y*15), GxEPD_BLACK);
+    }
+    display.setCursor(1, y_pos + 12);
+    if(i < 10){
+      display.print("0");
+      display.print(i);
+    } else {
+      display.print(i);
+    }
+    
+    display.print(":00");
+  }
+
+  
+  display.nextPage();
+
+}
+
+
+void drawHours() {
+
+  display.setPartialWindow(0, 0, display.width(), display.height());
+  display.setCursor(200, 150);
+}
+void drawTopPanel() {
+
+
+  display.setTextColor(GxEPD_BLACK);
+  display.setRotation(0);
+  display.setPartialWindow(0, 0, display.width(), display.height());
+  int line_position_y = 37;
+  display.drawLine(0, line_position_y, 400, line_position_y, GxEPD_BLACK);
+  display.drawLine(0, line_position_y + 1, 400, line_position_y + 1, GxEPD_BLACK);
+
+  uint16_t title_width;
+  char text[] = "Monday, Jun 16";
+  display.setFont(&FreeMonoBold9pt7b);
+  display.setTextSize(2);
+  display.getTextBounds(text, 0, 50, NULL, NULL, &title_width, NULL);
+
+  display.setCursor(200 - (title_width / 2), 25);
+
+  display.print(text);
+  display.nextPage();
 }
 
 void draw15minBlock(uint8_t x, uint8_t y) {
   display.setTextColor(GxEPD_BLACK);
   display.setRotation(0);
 
-  display.setPartialWindow(0, 0, display.width() , display.height());
+  display.setPartialWindow(0, 0, display.width(), display.height());
   display.setCursor(200, 150);
   display.setFont(&TomThumb);
   display.setTextSize(2);
   //display.fillRect(box_x, box_y, box_w, box_h, GxEPD_WHITE);
 
-  display.drawLine(x, y, x+150, y, GxEPD_BLACK);
+  display.drawLine(x, y, x + 150, y, GxEPD_BLACK);
   display.drawLine(x, y, x, y + 15, GxEPD_BLACK);
-  display.drawLine(x, y + 15, x+150, y + 15, GxEPD_BLACK);
-  display.drawLine(x+150, y, x+150, y + 15, GxEPD_BLACK);
+  display.drawLine(x, y + 15, x + 150, y + 15, GxEPD_BLACK);
+  display.drawLine(x + 150, y, x + 150, y + 15, GxEPD_BLACK);
 
-  display.setCursor(x+3, y + 13);
+  display.setCursor(x + 3, y + 13);
   display.print("Example event");
   display.nextPage();
-  
 }
+
 void helloFullScreenPartialMode() {
   //Serial.println("helloFullScreenPartialMode");
   const char fullscreen[] = "full screen update";
@@ -186,12 +209,12 @@ void partialTest() {
   display.firstPage();
 
 
-  display.setPartialWindow(0, 0, display.width() , display.height());
+  display.setPartialWindow(0, 0, display.width(), display.height());
   display.setCursor(200, 150);
   display.setFont(&TomThumb);
   display.setTextSize(2);
   display.print("this is tom thumb");
-  
+
   for (int i = 0; i < 5; i++) {
     uint8_t y_pos = 10 + (i * 60);
     display.drawLine(32, y_pos, 36, y_pos, GxEPD_BLACK);
@@ -201,16 +224,16 @@ void partialTest() {
     delay(100);
     display.nextPage();
   }
-    int16_t x1, y1;
+  int16_t x1, y1;
   uint16_t w, h;
   char tekst[] = "1234drink";
-  display.getTextBounds(tekst,100,100,&x1,&y1,&w,&h);
+  display.getTextBounds(tekst, 100, 100, &x1, &y1, &w, &h);
   Serial.println(h);
 
 
 
 
-  
+
   /*
   
   while (display.nextPage());
