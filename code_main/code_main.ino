@@ -1,17 +1,3 @@
-
-// base class GxEPD2_GFX can be used to pass references or pointers to the display instance as parameter, uses ~1.2k more code
-// enable or disable GxEPD2_GFX base class
-#define ENABLE_GxEPD2_GFX 0
-
-#include <GxEPD2_BW.h>
-#include <stdint.h>
-#include <Fonts/FreeMonoBold9pt7b.h>  //height: 9px
-#include <Fonts/Org_01.h>
-#include <Fonts/Picopixel.h>
-#include <Fonts/Tiny3x3a2pt7b.h>
-#include <Fonts/TomThumb.h>
-#include <Adafruit_TinyUSB.h>
-
 /*
   int16_t x1, y1;
   uint16_t w, h;
@@ -21,61 +7,88 @@
   full refresh diplay
   display.setFullWindow();
 */
+#include <vector>
+#include <GxEPD2_BW.h>
+#include <stdint.h>
+#include <Fonts/FreeMonoBold9pt7b.h>  //height: 9px
+#include <Fonts/Org_01.h>
+#include <Fonts/Picopixel.h>
+#include <Fonts/Tiny3x3a2pt7b.h>
+#include <Fonts/TomThumb.h>
+#include <memory>
+//#include <Adafruit_TinyUSB.h>
 
-
-// ESP32 CS(SS)=5,SCL(SCK)=18,SDA(MOSI)=23,BUSY=4,RES(RST)=17,DC=16
 #define CS_PIN (D1)
 #define BUSY_PIN (D4)
 #define RES_PIN (D3)
 #define DC_PIN (D2)
 
-
 // 4.2'' EPD Module
-GxEPD2_BW<GxEPD2_420_GDEY042T81, GxEPD2_420_GDEY042T81::HEIGHT> display(GxEPD2_420_GDEY042T81(/*CS=5*/ CS_PIN, /*DC=*/DC_PIN, /*RES=*/RES_PIN, /*BUSY=*/BUSY_PIN));  // 400x300, SSD1683
+GxEPD2_BW<GxEPD2_420_GDEY042T81, GxEPD2_420_GDEY042T81::HEIGHT> display(GxEPD2_420_GDEY042T81(/*CS=*/CS_PIN, /*DC=*/DC_PIN, /*RES=*/RES_PIN, /*BUSY=*/BUSY_PIN));  // 400x300, SSD1683
 
-struct MyStruct {
-  int startMin;
-  int endMin;
+
+
+#define MAX_SINGLE_EVENTS 16
+#define MAX_ALLDAY_EVENTS 4
+
+struct CalendarSingleEvent {
+  int start_min;
+  int end_min;
   String event_name;
-  bool displayed = false;
+  bool is_displayed = false;
 };
-MyStruct events_test[10];
-int howManyEvents = 4;
+
+struct CalendarAllDay {
+  int days_left;
+  String allday_name;
+};
+
+std::vector<CalendarSingleEvent> v_single_events;
+std::vector<CalendarAllDay> v_allday_events;
+
+
+void update_events() {
+  // Create a vector called cars that will store strings
+
+  CalendarSingleEvent ev_1 = { 720, 780, "event first one event" };
+  CalendarSingleEvent ev_2 = { 795, 825, "event 2" };
+  CalendarSingleEvent ev_3 = { 825, 945, "event three" };
+  CalendarSingleEvent ev_4 = { 975, 990, "event fououor" };
+  v_single_events.push_back(ev_1);
+  v_single_events.push_back(ev_2);
+  v_single_events.push_back(ev_3);
+  v_single_events.push_back(ev_4);
+
+  int index = 0;
+  for (auto i : v_single_events) {
+    Serial.print("event name num ");
+    Serial.print(index);
+    Serial.println(i.event_name);
+    index++;
+  }
+}
+
 void setup() {
   Serial.begin(115200);
-  while (!Serial);
+  while (!Serial)
+    ;
   pinMode(LED_BUILTIN, OUTPUT);
   display.setTextColor(GxEPD_BLACK);
   display.init(115200, true, 50, false);
   display.setRotation(0);
   display.firstPage();
-  //helloWorld();
-  //helloFullScreenPartialMode();
-  events_test[0].startMin = 200;
-  events_test[0].event_name = "first one";
-  events_test[0].endMin = 260;
-  events_test[1].startMin = 360;
-  events_test[1].event_name = "hello ehlelo  worl";
-  events_test[1].endMin = 500;
-  events_test[2].startMin = 300;
-  events_test[2].event_name = "sth very funny";
-  events_test[2].endMin = 350;
-  events_test[2].startMin = 300;
-  events_test[3].startMin = 100;
-  events_test[3].event_name = "previous one";
-  events_test[3].endMin = 180;
-
   delay(1000);
 
   drawTopPanel();
+  update_events();
   
-  
-  for(int i = 100; i < 400; i+=3){
-    drawEventBox(i, 0, 39, 200, (uint16_t)300 - 38);
-    for(int y = 0; y < 4; y++){
-      events_test[y].displayed = false;
+  for (int i = 700; i < 1000; i += 3) {
+    drawEventBox(i);
+    for (auto i : v_single_events) {
+      i.is_displayed = false;
+      
     }
-    delay(200);
+    delay(1000);
   }
   //drawHours();
   //draw15minBlock(50, 100);
@@ -89,27 +102,38 @@ void setup() {
 const char HelloWorld[] = "Hello World!";
 const char HelloWeACtStudio[] = "WeAct Studio";
 
+#define BOX_EVENT_X_POS 0
+#define BOX_EVENT_Y_POS 39
+#define BOX_EVENT_WIDTH 200
+#define BOX_EVENT_HEIGHT (300 - 38)
 
-void drawEventBox(uint16_t minute, uint8_t x, uint8_t event_box_pos_y, uint16_t width, uint16_t height) {
-  display.setPartialWindow(0, event_box_pos_y, width, height);
- 
-  display.fillRect(0, event_box_pos_y, width, height, GxEPD_WHITE);
-  
+
+void drawEventBox(uint16_t minute) {
+  display.setPartialWindow(BOX_EVENT_X_POS, BOX_EVENT_Y_POS, BOX_EVENT_WIDTH, BOX_EVENT_HEIGHT);
+
+  display.fillRect(BOX_EVENT_X_POS, BOX_EVENT_Y_POS, BOX_EVENT_WIDTH, BOX_EVENT_HEIGHT, GxEPD_WHITE);
+  display.drawLine(BOX_EVENT_X_POS, BOX_EVENT_Y_POS + 60, BOX_EVENT_X_POS+BOX_EVENT_WIDTH, BOX_EVENT_Y_POS + 60, GxEPD_BLACK);
+  display.drawLine(BOX_EVENT_X_POS, BOX_EVENT_Y_POS + 60, BOX_EVENT_X_POS+BOX_EVENT_WIDTH, BOX_EVENT_Y_POS + 60, GxEPD_BLACK);
+
   //draw hours
   display.setFont(&TomThumb);
   display.setTextSize(2);
 
-  int startMinute = minute - 60;
+  int start_minute = minute - 60;
 
-  width = width - 4;
-  for (int i = startMinute; i < startMinute + 262; i++) {
-    if (i % 15 == 0) {
-      display.drawLine(40, 38 + i - startMinute, 46, 38 + i - startMinute, GxEPD_BLACK);
+  for (int min = start_minute; min < start_minute + 262; min++) {
+    int minuteDifference = min - start_minute;
+    // draw 15min line
+    if (min % 15 == 0) {
+      display.drawLine(BOX_EVENT_X_POS+40, BOX_EVENT_Y_POS + minuteDifference, BOX_EVENT_X_POS+45, BOX_EVENT_Y_POS + minuteDifference, GxEPD_BLACK);
     }
-    if (i % 60 == 0) {
-      int actualHour = i / 60;
-      display.drawLine(40, 2 + 38 + i - startMinute, 46, 2 +38 + i - startMinute, GxEPD_BLACK);
-      display.setCursor(1, i - startMinute + 38 + 12);
+    
+    // Draw hour line and hour itself
+    if (min % 60 == 0) {  
+      int actualHour = min / 60;
+      display.drawLine(BOX_EVENT_X_POS, BOX_EVENT_Y_POS + minuteDifference, BOX_EVENT_X_POS+45, BOX_EVENT_Y_POS + minuteDifference, GxEPD_BLACK);
+
+      display.setCursor(BOX_EVENT_X_POS + 1, BOX_EVENT_Y_POS + minuteDifference + 12);
       if (actualHour < 10) {
         display.print("0");
         display.print(actualHour);
@@ -118,74 +142,85 @@ void drawEventBox(uint16_t minute, uint8_t x, uint8_t event_box_pos_y, uint16_t 
       }
       display.print(":00");
     }
-    
-    for (int y = 0; y < howManyEvents; y++) {
-      if (events_test[y].startMin == i && events_test[y].displayed == false) {
-        Serial.println("start min");
-        Serial.println(i);
-        int event_pos_start = 38 + i - startMinute;
-        int event_pos_end = 38 + i - startMinute + ( events_test[y].endMin - events_test[y].startMin);
-        
+    for (auto i : v_single_events) {
+      if(i.start_min == min && i.is_displayed == false){
+        int event_y_start = BOX_EVENT_Y_POS + minuteDifference;
+        int event_y_end = event_y_start + (i.end_min - i.start_min);
+        int event_x_start = BOX_EVENT_X_POS + 50;
+        int event_x_end = BOX_EVENT_X_POS + BOX_EVENT_WIDTH-1;
+        //Draw a box
+        display.drawLine(event_x_start, event_y_start,event_x_start,event_y_end,GxEPD_BLACK);
+        display.drawLine(event_x_start,event_y_end, event_x_end, event_y_end, GxEPD_BLACK);
+        display.drawLine(event_x_end, event_y_end, event_x_end, event_y_start, GxEPD_BLACK);
+        display.drawLine(event_x_end, event_y_start, event_x_start, event_y_start, GxEPD_BLACK);
+        i.is_displayed = true;
+      }
+      
+    }
+    /*
+    for (int y = 0; y < 10; y++) {
+      if (single_events[y].start_min == i && single_events[y].is_displayed == false) {
+        //Serial.println("start min");
+        //Serial.println(i);
+        int event_pos_start = 38 + i - start_minute;
+        int event_pos_end = 38 + i - start_minute + (single_events[y].end_min - single_events[y].start_min);
+
         display.drawLine(60, event_pos_start, width, event_pos_start, GxEPD_BLACK);
         display.drawLine(60, event_pos_end, width, event_pos_end, GxEPD_BLACK);
         display.drawLine(60, event_pos_start, 60, event_pos_end, GxEPD_BLACK);
         display.drawLine(width, event_pos_start, width, event_pos_end, GxEPD_BLACK);
-        
+
         display.setCursor(60, event_pos_start + 13);
-        display.print(events_test[y].event_name);
-        events_test[y].displayed = true;
+        display.print(single_events[y].event_name);
+        single_events[y].is_displayed = true;
       }
-      if(events_test[y].endMin == i && events_test[y].displayed == false){
-        Serial.println("this is the end");
-        Serial.println(i);
-        int event_pos_start = 38 ;
-        int event_pos_end = 38 + i - startMinute;
+      if (single_events[y].end_min == i && single_events[y].is_displayed == false) {
+        //Serial.println("this is the end");
+        //Serial.println(i);
+        int event_pos_start = 38;
+        int event_pos_end = 38 + i - start_minute;
         /////    38 + 180 - 140 +80
         display.drawLine(60, event_pos_start, width, event_pos_start, GxEPD_BLACK);
         display.drawLine(60, event_pos_end, width, event_pos_end, GxEPD_BLACK);
         display.drawLine(60, event_pos_start, 60, event_pos_end, GxEPD_BLACK);
         display.drawLine(width, event_pos_start, width, event_pos_end, GxEPD_BLACK);
 
-        if((event_pos_end - 38) > 13){
+        if ((event_pos_end - 38) > 13) {
           display.setCursor(60, 38 + 12);
-          display.print(events_test[y].event_name);
-        }else{
+          display.print(single_events[y].event_name);
+        } else {
           display.setCursor(60, event_pos_end - 13);
-          display.print(events_test[y].event_name);
+          display.print(single_events[y].event_name);
         }
 
-        events_test[y].displayed = true;
+        single_events[y].is_displayed = true;
       }
-
-    }
+    }*/
   }
 
   display.nextPage();
 }
 
 
-void drawHours() {
+#define BOX_PANEL_X_POS 0
+#define BOX_PANEL_Y_POS 0
+#define BOX_PANEL_WIDTH 400
+#define BOX_PANEL_HEIGHT 38
 
-  display.setPartialWindow(0, 0, display.width(), display.height());
-  display.setCursor(200, 150);
-}
 void drawTopPanel() {
-
-
-  display.setTextColor(GxEPD_BLACK);
-  display.setRotation(0);
-  display.setPartialWindow(0, 0, display.width(), display.height());
-  int line_position_y = 37;
-  display.drawLine(0, line_position_y, 400, line_position_y, GxEPD_BLACK);
-  display.drawLine(0, line_position_y + 1, 400, line_position_y + 1, GxEPD_BLACK);
+  display.setPartialWindow(BOX_PANEL_X_POS, BOX_PANEL_Y_POS, BOX_PANEL_WIDTH, BOX_PANEL_HEIGHT);
+  display.fillRect(BOX_PANEL_X_POS, BOX_PANEL_Y_POS, BOX_PANEL_WIDTH, BOX_PANEL_HEIGHT, GxEPD_WHITE);
+  
+  display.drawLine(BOX_PANEL_X_POS, BOX_PANEL_HEIGHT + BOX_PANEL_Y_POS, BOX_PANEL_X_POS + BOX_PANEL_WIDTH , BOX_PANEL_HEIGHT + BOX_PANEL_Y_POS, GxEPD_BLACK);
+  display.drawLine(BOX_PANEL_X_POS, BOX_PANEL_HEIGHT + BOX_PANEL_Y_POS +1, BOX_PANEL_X_POS + BOX_PANEL_WIDTH, BOX_PANEL_HEIGHT + BOX_PANEL_Y_POS +1, GxEPD_BLACK);
 
   uint16_t title_width;
-  char text[] = "Monday, Jun 16";
+  char text[] = "Thursday, Oct 29";
   display.setFont(&FreeMonoBold9pt7b);
   display.setTextSize(2);
-  display.getTextBounds(text, 0, 50, NULL, NULL, &title_width, NULL);
+  display.getTextBounds(text, 0, 100, NULL, NULL, &title_width, NULL);
 
-  display.setCursor(200 - (title_width / 2), 25);
+  display.setCursor(((BOX_PANEL_X_POS +  BOX_PANEL_WIDTH) /2)- (title_width / 2), BOX_PANEL_Y_POS + BOX_PANEL_HEIGHT);
 
   display.print(text);
   display.nextPage();
